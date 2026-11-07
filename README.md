@@ -6,6 +6,7 @@
 **RA:** 250870
 **Curso:** Análise e Desenvolvimento de Sistemas
 **Instituição:** FACENS
+**Disciplina:** UX/UI e Testes de Software
 **Atividade:** Testes de caixa cinza no endpoint de login do Supabase Auth (Postman)
 
 ---
@@ -111,6 +112,50 @@ Todas as requisições usam:
   - `Content-Type: application/json`
 - **Body (raw/JSON):** conforme a tabela.
 
+### Exemplo dos headers
+
+| Header | Valor usado na requisição | Exemplo ilustrativo (fictício) | Função |
+|---|---|---|---|
+| `apikey` | `{{api_key}}` | `sb_publishable_<CHAVE_FICTICIA>` | Chave **publishable** do projeto, enviada em `apikey`, como orienta a documentação do Supabase |
+| `Authorization` | `Bearer {{anon_key}}` | `Bearer <JWT_ANON_EXEMPLO_FICTICIO>` | Chave **anon legada**, que é um JWT, enviada como Bearer para atender à exigência do professor |
+| `Content-Type` | `application/json` | `application/json` | Indica que o corpo da requisição é JSON |
+
+A chave publishable **não é um JWT**, por isso ela vai em `apikey` e não em `Authorization: Bearer`. A chave `anon` legada é um JWT e, por isso, pôde ser usada no header `Authorization` sem recorrer a nenhuma chave administrativa (`sb_secret_…` e `service_role` não são usadas). A justificativa completa e a verificação com `curl` estão na seção 3 ("Decisão sobre os headers"). Os valores da coluna "Exemplo ilustrativo" são inventados e só mostram o formato; nas requisições reais as chaves vêm das variáveis do Environment e **não** aparecem neste repositório.
+
+### Exemplo do body
+
+Formato do corpo enviado (valores **fictícios**, só para ilustrar):
+
+```json
+{
+  "email": "usuario.teste@example.com",
+  "password": "SenhaFicticia#123"
+}
+```
+
+Nos testes reais o CT-01 usa `{{email}}` e `{{password}}`, lidos do Environment local, e os demais cenários usam os corpos da tabela abaixo.
+
+### Fluxo de login testado
+
+Diagrama complementar, no estilo dos diagramas de sequência vistos em aula. Ele descreve somente o que foi **observado** nas execuções reais deste repositório.
+
+```mermaid
+sequenceDiagram
+    actor T as Aluno (Postman Desktop)
+    participant A as Supabase Auth (POST /auth/v1/token)
+    T->>A: e-mail e senha, com os headers apikey e Authorization
+    alt CT-01 - credenciais válidas
+        A-->>T: 200 OK com access_token e refresh_token
+    else CT-02, CT-03 e CT-05 - senha incorreta, e-mail inexistente ou malformado
+        A-->>T: 400 invalid_credentials, sem tokens
+    else CT-04 - campos vazios
+        A-->>T: 400 validation_failed, sem tokens
+    end
+    T->>T: scripts conferem status, JSON e presença ou ausência de token
+```
+
+### Requisições
+
 | ID | Cenário | Nome da requisição no Postman | Body enviado |
 |---|---|---|---|
 | CT-01 | Login válido | `CT-01 - Login valido` | `email = {{email}}`, `password = {{password}}` (usuário existente, credenciais válidas) |
@@ -157,23 +202,35 @@ Nas capturas do CT-01, os valores de `access_token` e `refresh_token` e o e-mail
 
 ## 7. Registro dos Testes
 
-Registro completo na planilha `planilha/Registro-de-Testes.xlsx` (entrada, esperado, obtido, status e observações técnicas de cada caso).
+Registro completo na planilha `planilha/Registro-de-Testes.xlsx`, organizada em três abas, no modelo de registro visto em aula:
 
-| ID | Cenário | Resultado esperado | Resultado obtido | Status |
-|---|---|---|---|---|
-| CT-01 | Login válido | HTTP 200 com `access_token` | HTTP **200 OK**, `access_token` presente, `token_type = bearer`, `expires_in = 3600` | Aprovado |
-| CT-02 | Senha incorreta | Falha de autenticação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
-| CT-03 | Usuário inexistente | Falha de autenticação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
-| CT-04 | Campos vazios | Erro de validação (4xx), sem `access_token` | HTTP **400**, `validation_failed`, "missing email or phone" | Aprovado |
-| CT-05 | E-mail malformado | Rejeição ou erro de validação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
+- **Informações do Projeto:** ambiente, responsável e data dos testes.
+- **Sistema:** os testes executados, por componente (entrada, execução, esperado, obtido, status e observações técnicas de cada caso).
+- **Aceitação:** os requisitos de autenticação relacionados aos cenários e aos resultados aprovados (sem nenhuma execução nova).
+
+| ID | Cenário | Entrada utilizada | Resultado esperado | Resultado obtido | Status |
+|---|---|---|---|---|---|
+| CT-01 | Login válido | `email = {{email}}` (e-mail do usuário de teste), `password = {{password}}` (senha local, não registrada) | HTTP 200 com `access_token` | HTTP **200 OK**, `access_token` presente, `token_type = bearer`, `expires_in = 3600` | Aprovado |
+| CT-02 | Senha incorreta | `email = {{email}}` (usuário existente), `password = "SenhaIncorreta#2026"` | Falha de autenticação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
+| CT-03 | Usuário inexistente | `email = "usuario.inexistente.cc2026@example.com"` (não cadastrado), `password = "SenhaQualquer#2026"` | Falha de autenticação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
+| CT-04 | Campos vazios | `email = ""`, `password = ""` | Erro de validação (4xx), sem `access_token` | HTTP **400**, `validation_failed`, "missing email or phone" | Aprovado |
+| CT-05 | E-mail malformado | `email = "isto-nao-e-um-email"`, `password = "123"` | Rejeição ou erro de validação (4xx), sem `access_token` | HTTP **400**, `invalid_credentials`, "Invalid login credentials" | Aprovado |
 
 "Aprovado" significa que o resultado observado correspondeu ao esperado. Nos casos CT-02 a CT-05 a resposta negativa **é o comportamento correto** do sistema; nenhuma delas indica falha do Supabase.
 
 O CT-05 (`CT-05 - E-mail malformado`) representa o requisito de **credenciais inválidas** do enunciado, por meio de um e-mail em formato incorreto (veja a seção 5).
 
-**Planilha de testes preenchida** (captura real do arquivo `planilha/Registro-de-Testes.xlsx` aberto no Excel, com os cinco cenários, os resultados obtidos e os status): [prints/18-planilha-testes-preenchida.png](prints/18-planilha-testes-preenchida.png)
+**Planilha de testes preenchida** (capturas reais do arquivo `planilha/Registro-de-Testes.xlsx` aberto no Excel):
 
-![Planilha de testes preenchida](prints/18-planilha-testes-preenchida.png)
+| Aba | Conteúdo | Captura |
+|---|---|---|
+| Sistema | Os cinco cenários, as entradas, os resultados obtidos e os status | [prints/18-planilha-testes-preenchida.png](prints/18-planilha-testes-preenchida.png) |
+| Aceitação | Requisitos de autenticação relacionados aos cenários e aos resultados aprovados | [prints/18b-planilha-aceitacao.png](prints/18b-planilha-aceitacao.png) |
+| Informações do Projeto | Ambiente, responsável e data dos testes | [prints/18c-planilha-informacoes-projeto.png](prints/18c-planilha-informacoes-projeto.png) |
+
+![Planilha de testes preenchida (aba Sistema)](prints/18-planilha-testes-preenchida.png)
+![Planilha, aba Aceitação](prints/18b-planilha-aceitacao.png)
+![Planilha, aba Informações do Projeto](prints/18c-planilha-informacoes-projeto.png)
 
 ## 8. Resultados Obtidos
 
@@ -238,6 +295,7 @@ Valores lidos diretamente do Postman:
 ## Pendências
 
 - Nenhuma pendência de conteúdo: os cinco cenários foram executados e registrados, e o repositório foi publicado depois da auditoria de segurança (sem senhas, tokens ou chaves privadas).
+- Fora do escopo desta atividade: cadastro de usuário (Registrar-se), interface gráfica e automação com Selenium.
 - O usuário de teste do Supabase é descartável e pode ser excluído após a avaliação.
 
 ## Estrutura do repositório
