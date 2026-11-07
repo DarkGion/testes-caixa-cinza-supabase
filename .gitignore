@@ -1,0 +1,33 @@
+# ---- Segredos e credenciais: nunca versionar ----
+.env
+.env.*
+*.pem
+*.key
+secrets/
+credenciais*
+
+# Environments exportados do Postman (podem conter chaves e senha).
+# Somente o template sem segredos e liberado.
+postman/*.postman_environment.json
+postman/*.postman_globals.json
+!postman/*.postman_environment.template.json
+
+# ---- Capturas originais sem tarja e rascunhos ----
+prints/_originais/
+prints/**/raw_*
+prints/**/*-sem-tarja.*
+prints/**/*_raw.*
+raw_*
+*.tmp
+
+# ---- Arquivos de sistema e de editor ----
+Thumbs.db
+desktop.ini
+.DS_Store
+~$*.xlsx
+~$*.docx
+.vscode/
+.idea/
+
+# ---- Arquivos de ferramentas locais ----
+.claude/
