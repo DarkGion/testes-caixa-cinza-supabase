@@ -237,7 +237,8 @@ Valores lidos diretamente do Postman:
 
 ## Pendências
 
-- Antes de publicar no GitHub: revisão final e autorização explícita do aluno. Nada foi publicado até agora.
+- Nenhuma pendência de conteúdo: os cinco cenários foram executados e registrados, e o repositório foi publicado depois da auditoria de segurança (sem senhas, tokens ou chaves privadas).
+- O usuário de teste do Supabase é descartável e pode ser excluído após a avaliação.
 
 ## Estrutura do repositório
 
